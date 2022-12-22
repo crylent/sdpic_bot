@@ -70,7 +70,7 @@ final class SdpicBot(
                         BotStatus.EXCEPT_NEGATIVE_PROMPT -> {
                             status = BotStatus.EXCEPT_COMMAND
                             input.negativePrompt = message.text
-                            "*Negative Prompt:* ${input.prompt}"
+                            "*Negative Prompt:* ${input.negativePrompt}"
                         }
                         BotStatus.WAIT_FOR_RESULT -> null
                     }
