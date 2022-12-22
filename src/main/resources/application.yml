@@ -1,0 +1,9 @@
+telegram:
+  botName: sdpic_bot
+  token: ${TOKEN}
+
+sd:
+  host: 127.0.0.1
+  port: 7860
+  api:
+    txt2img: /sdapi/v1/txt2img
