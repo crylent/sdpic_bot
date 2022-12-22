@@ -105,8 +105,8 @@ final class SdpicBot(
 
     private val replyMarkup = ReplyKeyboardMarkup().apply {
         keyboard = listOf(
-            listOf("Set Prompt", "Set Negative Prompt"),
-            listOf("CREATE")
+            listOf("✅ Set Prompt", "❌ Set Negative Prompt"),
+            listOf("✏ CREATE")
         ).map { rowButtons ->
             val row = KeyboardRow()
             rowButtons.forEach { rowButton -> row.add(rowButton) }
