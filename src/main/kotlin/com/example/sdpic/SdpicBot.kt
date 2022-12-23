@@ -18,6 +18,7 @@ import java.io.InputStream
 @Service
 final class SdpicBot(
     @Autowired private val sd: SD,
+    @Autowired private val db: Database,
     @Value("\${telegram.botName}") private val botName: String,
     @Value("\${telegram.token}") private val token: String
     ) : TelegramLongPollingBot() {
@@ -31,7 +32,10 @@ final class SdpicBot(
     override fun getBotUsername() = botName
 
     private var status = BotStatus.EXCEPT_COMMAND
-    private val input = SDInput()
+
+    companion object {
+        const val PROMPT_MAX_LENGTH = 1024
+    }
 
     override fun onUpdateReceived(update: Update) {
         runBlocking {
@@ -41,21 +45,21 @@ final class SdpicBot(
                 val responseText = if (message.hasText()) {
                     when (status) {
                         BotStatus.EXCEPT_COMMAND -> when (message.text) {
-                            "/start" -> {
+                            BotCommands.START.cmd -> {
                                 status = BotStatus.EXCEPT_COMMAND
-                                "Welcome to SDpic bot"
+                                if (db.newUser(chatId)) "Welcome to SDpic bot!"
+                                else "Welcome again!"
                             }
-                            "Set Prompt" -> {
+                            BotCommands.SET_PROMPT.cmd -> {
                                 status = BotStatus.EXCEPT_PROMPT
                                 "Now input the prompt for Stable Diffusion. You can use (_single_), ((_double_)) and even (((_triple_))) parentheses to amplify some part of input."
                             }
-                            "Set Negative Prompt" -> {
+                            BotCommands.SET_NEGATIVE_PROMPT.cmd -> {
                                 status = BotStatus.EXCEPT_NEGATIVE_PROMPT
                                 "Now input the negative prompt for Stable Diffusion. You can use (_single_), ((_double_)) and even (((_triple_))) parentheses to amplify some part of input."
                             }
-                            "CREATE" -> {
+                           BotCommands.CREATE.cmd -> {
                                 status = BotStatus.WAIT_FOR_RESULT
-                                //SD.createImage(input, SDApi.TXT2IMG)
                                 @Suppress("DeferredResultUnused")
                                 async { createImage(chatId) }
                                 "Please wait..."
@@ -63,14 +67,20 @@ final class SdpicBot(
                             else -> null
                         }
                         BotStatus.EXCEPT_PROMPT -> {
-                            status = BotStatus.EXCEPT_COMMAND
-                            input.prompt = message.text
-                            "*Prompt:* ${input.prompt}"
+                            if (message.text.length <= PROMPT_MAX_LENGTH) {
+                                status = BotStatus.EXCEPT_COMMAND
+                                db.updateUserInput(chatId, InputType.PROMPT, message.text)
+                                "*Prompt:* ${message.text}"
+                            }
+                            else "Please shorten the input and try again"
                         }
                         BotStatus.EXCEPT_NEGATIVE_PROMPT -> {
-                            status = BotStatus.EXCEPT_COMMAND
-                            input.negativePrompt = message.text
-                            "*Negative Prompt:* ${input.negativePrompt}"
+                            if (message.text.length <= PROMPT_MAX_LENGTH) {
+                                status = BotStatus.EXCEPT_COMMAND
+                                db.updateUserInput(chatId, InputType.NEGATIVE_PROMPT, message.text)
+                                "*Negative Prompt:* ${message.text}"
+                            }
+                            else "Please shorten the input and try again"
                         }
                         BotStatus.WAIT_FOR_RESULT -> null
                     }
@@ -83,7 +93,7 @@ final class SdpicBot(
     }
 
     private suspend fun createImage(chatId: Long) {
-        val img = sd.createImage(input, sd.txt2img)
+        val img = sd.createImage(db.getUserInput(chatId), sd.txt2img)
         status = BotStatus.EXCEPT_COMMAND
         sendImage(chatId, img)
     }
@@ -105,8 +115,8 @@ final class SdpicBot(
 
     private val replyMarkup = ReplyKeyboardMarkup().apply {
         keyboard = listOf(
-            listOf("✅ Set Prompt", "❌ Set Negative Prompt"),
-            listOf("✏ CREATE")
+            listOf(BotCommands.SET_PROMPT.cmd, BotCommands.SET_NEGATIVE_PROMPT.cmd),
+            listOf(BotCommands.CREATE.cmd)
         ).map { rowButtons ->
             val row = KeyboardRow()
             rowButtons.forEach { rowButton -> row.add(rowButton) }

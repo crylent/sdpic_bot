@@ -7,3 +7,10 @@ sd:
   port: 7860
   api:
     txt2img: /sdapi/v1/txt2img
+
+db:
+  user: sdpic
+  password: ${DBPASS}
+  dbname: sdpic
+  port: 1433
+  type: sqlserver
