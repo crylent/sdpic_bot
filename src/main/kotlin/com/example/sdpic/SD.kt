@@ -15,8 +15,8 @@ import java.util.Base64
 @Component
 class SD(
     @Value("\${sd.api.txt2img}") val txt2img: String,
-    @Value("\${sd.host}") val host: String,
-    @Value("\${sd.port}") val port: String
+    @Value("\${sd.host}") private val host: String,
+    @Value("\${sd.port}") private val port: String
 ) {
     private val http = HttpClient.newHttpClient()
 
